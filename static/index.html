@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ObjectSight AI - Visual Object Detector & Internet Intelligence</title>
+  <meta name="description" content="Real-time object detection software with instant internet search and Wikipedia detail extraction for robotics and vision application.">
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- TensorFlow.js and COCO-SSD Model for Instant Client-Side Camera AI -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+          <path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>OBJECTSIGHT AI</h1>
+        <span>ROBOTICS VISION & SEARCH ENGINE</span>
+      </div>
+    </div>
+
+    <div class="system-status">
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        <span id="status-text">SYSTEM ONLINE</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Layout -->
+  <main class="dashboard-container">
+    
+    <!-- Left Column: Camera Viewport & Detection Controls -->
+    <section class="hud-panel vision-section">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <span>OPTICAL SENSOR FEED</span>
+        </div>
+
+        <div class="mode-tabs">
+          <button class="tab-btn active" id="tab-webcam" onclick="switchMode('webcam')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            Live Camera
+          </button>
+          <button class="tab-btn" id="tab-upload" onclick="switchMode('upload')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload File
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Viewport Canvas -->
+      <div class="viewport-container" id="viewport-box">
+        <div class="hud-grid-overlay"></div>
+        <div class="hud-corner tl"></div>
+        <div class="hud-corner tr"></div>
+        <div class="hud-corner bl"></div>
+        <div class="hud-corner br"></div>
+        <div class="scanning-line" id="scanner"></div>
+
+        <!-- Video Feed -->
+        <video id="webcam-feed" class="viewport-media" autoplay playsinline muted style="display: block;"></video>
+
+        <!-- Static Image Display -->
+        <img id="image-feed" class="viewport-media" alt="Detection Viewport" style="display: none;" />
+
+        <!-- Overlay Canvas for Bounding Boxes -->
+        <canvas id="vision-canvas"></canvas>
+      </div>
+
+      <!-- Control Toolbar -->
+      <div class="control-toolbar">
+        <button class="btn-primary" id="btn-toggle-cam" onclick="toggleWebcam()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start Camera
+        </button>
+
+        <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="handleFileUpload(event)">
+        <button class="btn-secondary" onclick="document.getElementById('file-input').click()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Choose Photo/Video
+        </button>
+
+        <button class="btn-secondary" id="btn-crop-mode" onclick="toggleCropMode()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+          Crop Region
+        </button>
+
+        <div class="confidence-slider">
+          <label for="conf-range">CONF:</label>
+          <input type="range" id="conf-range" min="20" max="90" value="40" oninput="updateConfidence(this.value)">
+          <span id="conf-val">40%</span>
+        </div>
+      </div>
+
+      <!-- Sample Images Quick Picker -->
+      <div class="samples-container">
+        <div class="samples-title">PRESET DEMO MEDIA (CLICK TO TEST)</div>
+        <div class="samples-grid">
+          <div class="sample-card" onclick="loadSampleImage('https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop', 'Cell Phone')">
+            <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&auto=format&fit=crop" alt="Phone">
+            <span>Smartphone</span>
+          </div>
+          <div class="sample-card" onclick="loadSampleImage('https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&auto=format&fit=crop', 'Laptop')">
+            <img src="https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&auto=format&fit=crop" alt="Laptop">
+            <span>Laptop</span>
+          </div>
+          <div class="sample-card" onclick="loadSampleImage('https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop', 'Coffee Cup')">
+            <img src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop" alt="Cup">
+            <span>Coffee Cup</span>
+          </div>
+          <div class="sample-card" onclick="loadSampleImage('https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&auto=format&fit=crop', 'Dog')">
+            <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300&auto=format&fit=crop" alt="Dog">
+            <span>Dog</span>
+          </div>
+          <div class="sample-card" onclick="loadSampleImage('https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&auto=format&fit=crop', 'Robot')">
+            <img src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=300&auto=format&fit=crop" alt="Robot">
+            <span>Humanoid Robot</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detected Objects Chips List -->
+      <div class="detected-list-container">
+        <div class="samples-title">DETECTED OBJECTS (CLICK CHIP TO SEARCH INTERNET)</div>
+        <div class="chips-wrapper" id="chips-container">
+          <span style="color: var(--text-muted); font-size: 0.85rem; font-family: var(--font-mono);">No objects detected yet. Start camera or select an image.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Internet Intelligence & Detail Search Engine -->
+    <section class="hud-panel search-section">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span>INTERNET KNOWLEDGE ENGINE</span>
+        </div>
+      </div>
+
+      <!-- Manual Search Input -->
+      <form onsubmit="handleManualSearch(event)" class="search-bar-container">
+        <input type="text" id="manual-search-input" class="search-input" placeholder="Search any object (e.g. 'Robotic Arm', 'Microcontroller')...">
+        <button type="submit" class="btn-primary">Search</button>
+      </form>
+
+      <!-- Knowledge Details Card -->
+      <div class="knowledge-card" id="knowledge-card">
+        <div class="loader-overlay" id="loader" style="display: none;">
+          <div class="spinner"></div>
+          <span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-cyan);">FETCHING INTERNET DETAILS...</span>
+        </div>
+
+        <div id="knowledge-content">
+          <div class="knowledge-header">
+            <div class="knowledge-title">
+              <h2 id="obj-title">Select an Object</h2>
+              <span class="knowledge-category" id="obj-category">Vision AI Active</span>
+            </div>
+            <div class="knowledge-actions">
+              <button class="btn-tts" title="Read Details Aloud (Voice)" onclick="speakDetails()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="knowledge-body">
+            <p class="knowledge-summary" id="obj-summary">
+              Show an object to the camera or upload an image. The system will automatically classify objects and query Wikipedia, DuckDuckGo, and internet knowledge bases for real-time technical specifications and details.
+            </p>
+
+            <img id="obj-image" class="knowledge-thumb" src="" alt="" style="display: none;" />
+
+            <!-- Key Facts -->
+            <div class="facts-section">
+              <div class="specs-section">
+                <h4>KEY FACTS & OVERVIEW</h4>
+                <ul class="facts-list" id="obj-facts">
+                  <li>Visual object classifier backed by deep neural network models.</li>
+                  <li>Click any detected bounding box on the camera canvas to instantly query Wikipedia & technical archives.</li>
+                  <li>Supports manual drag-and-crop region search for unrecognized custom objects.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Technical Specifications Table -->
+            <div class="specs-section">
+              <h4>SPECIFICATIONS & METADATA</h4>
+              <table class="specs-table" id="obj-specs">
+                <tr><td>Detection Status</td><td>Ready</td></tr>
+                <tr><td>Source</td><td>Internet Knowledge Engine</td></tr>
+              </table>
+            </div>
+
+            <!-- External Links -->
+            <div style="margin-top: 10px;">
+              <a id="obj-link" href="#" target="_blank" style="color: var(--accent-cyan); font-family: var(--font-mono); font-size: 0.85rem; text-decoration: none; display: none;">
+                🌐 Read Full Wikipedia Article &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Section -->
+      <div class="history-section">
+        <div class="panel-header" style="margin-bottom: 0.6rem;">
+          <div class="panel-title" style="font-size: 0.95rem;">
+            <span>RECENT SEARCH HISTORY</span>
+          </div>
+          <button onclick="clearSearchHistory()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; font-family: var(--font-mono);">Clear</button>
+        </div>
+        <div class="history-items" id="history-list">
+          <div style="color: var(--text-muted); font-size: 0.8rem; font-family: var(--font-mono); text-align: center; padding: 10px;">History log is empty</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    ObjectSight AI &bull; Autonomous Vision & Internet Knowledge Pipeline &bull; Robotics Project
+  </footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
