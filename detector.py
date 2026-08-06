@@ -26,7 +26,9 @@ COCO_CLASSES = [
 ]
 
 class ObjectDetector:
-    def __init__(self, model_dir="models"):
+    def __init__(self, model_dir=None):
+        if model_dir is None:
+            model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
         self.model_dir = model_dir
         self.net = None
         self.load_model()

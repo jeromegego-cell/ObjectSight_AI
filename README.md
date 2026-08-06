@@ -35,7 +35,7 @@
 
 ### Method 1: Easy Launch Script
 ```bash
-cd /home/jerome/Robotics/Project/ObjectSight_AI
+cd ObjectSight_AI
 ./run.sh
 ```
 
